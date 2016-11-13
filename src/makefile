@@ -1,0 +1,18 @@
+CC=g++
+INC=-I./utils
+CFLAGS=-c -Wall -std=c++0x -D NDEBUG -O2
+LDFLAGS=-pthread
+SOURCES=main.cc
+OBJECTS=$(SOURCES:.cc=.o)
+EXECUTABLE=concurrent_unbounded_queue
+
+all:	$(SOURCES) $(EXECUTABLE)
+
+$(EXECUTABLE):	$(OBJECTS)
+	$(CC) $(LDFLAGS) $(OBJECTS) -o $@
+
+.cc.o:
+	$(CC) $(CFLAGS) $(INC) $< -o $@
+
+clean:
+	rm *.o concurrent_unbounded_queue
