@@ -11,6 +11,7 @@
 #include <sstream>
 #include <thread>
 #include <vector>
+#include <condition_variable>
 #include "lock_based_queue.h"
 #include "lock_free_queue.h"
 #include "log_util.h"
@@ -119,6 +120,18 @@ template <typename QueueType> class UnitTester {
   static std::string GetName(void) { return QueueType::name_; }
 
   void ThreadFunc(const std::size_t& id, const std::vector<TestOperation>& operation_list) {
+    // notify master I'm ready
+    {
+      std::unique_lock<std::mutex> lock(thread_ready_mutex_);
+      thread_ready_.at(id) = 1;
+      thread_ready_cv_.notify_one();
+    }
+    // wait master to signal
+    {
+      std::unique_lock<std::mutex> lock(thread_start_mutex_);
+      thread_start_cv_.wait(lock, [this] { return thread_start_flag_; });
+    }
+
 #ifndef NDEBUG
     std::stringstream sstr;
 #endif
@@ -131,13 +144,32 @@ template <typename QueueType> class UnitTester {
     debug_clog << "--- [" << queue_.name_ << "] Thread = "
                << operation_list_group.size() << " Concurrent History ---\n";
 
-    auto begin = std::chrono::steady_clock::now();
+    thread_ready_.resize(operation_list_group.size());
+    for (auto &ready : thread_ready_) { ready = 0; }
+    thread_start_flag_ = false;
 
     for (std::size_t i(0); i < operation_list_group.size(); i++) {
-      this->thread_pool.emplace_back([this, operation_list_group, i] { this->ThreadFunc(i, operation_list_group.at(i)); });
+      this->thread_pool_.emplace_back([this, operation_list_group, i] { this->ThreadFunc(i, operation_list_group.at(i)); });
     }
 
-    for (auto& thread : thread_pool) {
+    // wait all threads ready
+    {
+      std::unique_lock<std::mutex> lock(thread_ready_mutex_);
+      thread_ready_cv_.wait(lock,
+                            [this] { return std::all_of(thread_ready_.cbegin(), thread_ready_.cend(),
+                                                        [](const uint8_t & ready) { return ready; }); });
+    }
+
+    decltype(std::chrono::steady_clock::now()) begin;
+    // start testing
+    {
+      std::unique_lock<std::mutex> lock(thread_start_mutex_);
+      thread_start_flag_ = true;
+      begin = std::chrono::steady_clock::now();
+      thread_start_cv_.notify_all();
+    }
+
+    for (auto& thread : thread_pool_) {
       thread.join();
     }
 
@@ -147,13 +179,21 @@ template <typename QueueType> class UnitTester {
               << std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count()
               << " (ns) ---" << std::endl;
 
-    thread_pool.clear();
+    thread_pool_.clear();
     return (end - begin);
   }
 
  private:
   QueueType queue_;
-  std::vector<std::thread> thread_pool;
+  std::vector<std::thread> thread_pool_;
+
+  std::vector<uint8_t> thread_ready_;
+  std::mutex thread_ready_mutex_;
+  std::condition_variable thread_ready_cv_;
+
+  bool thread_start_flag_;
+  std::mutex thread_start_mutex_;
+  std::condition_variable thread_start_cv_;
 };
 
 class Tester {

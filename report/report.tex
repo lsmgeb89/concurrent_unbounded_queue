@@ -101,16 +101,16 @@ For each operation of each thread, we log on the invocation and response event. 
 For each throughput, we generate a plot to compare two implementation's performance. Here they are.
 
 \begin{figure}[H]
-  \includegraphics[scale=0.8]{result/result-tacc-7857629-write}
+  \includegraphics[scale=0.8]{result/result-tacc-7858356-write}
   \caption{Write-dominated Throughput}
 \end{figure}
 
 \begin{figure}[H]
-  \includegraphics[scale=0.8]{result/result-tacc-7857629-mixed}
+  \includegraphics[scale=0.8]{result/result-tacc-7858356-mixed}
   \caption{Mixed Throughput}
 \end{figure}
 
 \section*{Results Analysis}
-We can see that the result of both throughput nearly the same because in both implementation \lstinline{IsEmpty()} function are lock-free. So lock-free version's implementation does not enlarge the advantages in speed over the locked version in the mixed throughput. But these two throughput indeed distinct the performance of two implementations. We can see that the performance behavior are distinct clearly before threads number goes beyond 20. It is lock-free version has some advantages over locked version. And when threads number goes beyond 20, they all performs basically the same and even lock-free loses advantages because thread switching becomes dominate.
+We can see that the result of both throughput nearly the same because in both implementation \lstinline{IsEmpty()} function are lock-free. So lock-free version's implementation does not enlarge the advantages in speed over the locked version in the mixed throughput. But these two throughput indeed distinct the performance of two implementations. We can clearly see that lock-free version has better performance than locked version over all thread number. It is what we expected.
 
 \end{document}
