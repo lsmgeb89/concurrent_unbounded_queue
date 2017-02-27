@@ -18,7 +18,10 @@ cp -ar src/* "$RELEASE_FOLDER"/src
 cp readme.txt *_*.sh "$RELEASE_FOLDER"
 # compile report
 pushd report > /dev/null 2>&1
+Rscript graph.r result/result-tacc-7858356-mixed.txt > /dev/null 2>&1
+Rscript graph.r result/result-tacc-7858356-write.txt > /dev/null 2>&1
 pdflatex -output-directory="$RELEASE_FOLDER"/report report.tex > /dev/null 2>&1
+rm result/*.eps result/*.pdf
 popd > /dev/null 2>&1
 # clean auxiliary files
 pushd "$RELEASE_FOLDER"/report > /dev/null 2>&1
